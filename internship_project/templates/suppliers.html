@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Suppliers - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-truck"></i> Suppliers Management
+        </h1>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('add_supplier') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add New Supplier
+        </a>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-8">
+                <label for="search" class="form-label">Search Suppliers</label>
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search }}" placeholder="Name, email, or contact">
+                </div>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                <a href="{{ url_for('suppliers') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Suppliers Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            Suppliers List 
+            <span class="badge bg-secondary">{{ suppliers.total }} total</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if suppliers.items %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Contact</th>
+                        <th>Email</th>
+                        <th>Products</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for supplier in suppliers.items %}
+                    <tr>
+                        <td>
+                            <strong>{{ supplier.name }}</strong>
+                            {% if supplier.address %}
+                            <br><small class="text-muted">{{ supplier.address[:50] }}{% if supplier.address|length > 50 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if supplier.contact %}
+                            <i class="fas fa-phone text-muted"></i> {{ supplier.contact }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if supplier.email %}
+                            <i class="fas fa-envelope text-muted"></i> 
+                            <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ supplier.get_total_products() }} products</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-success">Active</span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('view_supplier', supplier_id=supplier.id) }}" 
+                                   class="btn btn-outline-info" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('edit_supplier', supplier_id=supplier.id) }}" 
+                                   class="btn btn-outline-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger btn-delete" 
+                                        data-supplier-id="{{ supplier.id }}" 
+                                        data-supplier-name="{{ supplier.name }}"
+                                        data-product-count="{{ supplier.get_total_products() }}" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if suppliers.pages > 1 %}
+        <nav aria-label="Suppliers pagination">
+            <ul class="pagination">
+                {% if suppliers.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('suppliers', page=suppliers.prev_num, search=search) }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for page_num in suppliers.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != suppliers.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('suppliers', page=page_num, search=search) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if suppliers.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('suppliers', page=suppliers.next_num, search=search) }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-truck fa-3x text-muted mb-3"></i>
+            <h5>No Suppliers Found</h5>
+            <p class="text-muted">
+                {% if search %}
+                No suppliers match your search criteria. Try adjusting your search terms.
+                {% else %}
+                You haven't added any suppliers yet. Click the "Add New Supplier" button to get started.
+                {% endif %}
+            </p>
+            {% if not search %}
+            <a href="{{ url_for('add_supplier') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Your First Supplier
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the supplier "<span id="supplierName"></span>"?</p>
+                <div id="productWarning" class="alert alert-warning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning:</strong> This supplier has <span id="productCount"></span> active products. 
+                    You must reassign or delete these products before deleting the supplier.
+                </div>
+                <p class="text-muted small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger" id="deleteButton">Delete Supplier</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle delete button clicks
+    const deleteButtons = document.querySelectorAll('.btn-delete');
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const deleteForm = document.getElementById('deleteForm');
+    const supplierNameSpan = document.getElementById('supplierName');
+    const productWarning = document.getElementById('productWarning');
+    const productCountSpan = document.getElementById('productCount');
+    const deleteButton = document.getElementById('deleteButton');
+
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const supplierId = this.getAttribute('data-supplier-id');
+            const supplierName = this.getAttribute('data-supplier-name');
+            const productCount = parseInt(this.getAttribute('data-product-count'));
+            
+            supplierNameSpan.textContent = supplierName;
+            deleteForm.action = `/suppliers/delete/${supplierId}`;
+            
+            if (productCount > 0) {
+                productCountSpan.textContent = productCount;
+                productWarning.style.display = 'block';
+                deleteButton.disabled = true;
+                deleteButton.textContent = 'Cannot Delete';
+            } else {
+                productWarning.style.display = 'none';
+                deleteButton.disabled = false;
+                deleteButton.textContent = 'Delete Supplier';
+            }
+            
+            deleteModal.show();
+        });
+    });
+});
+</script>
+{% endblock %}

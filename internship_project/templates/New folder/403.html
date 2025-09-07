@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Access Forbidden - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto text-center">
+        <div class="card">
+            <div class="card-body py-5">
+                <i class="fas fa-lock fa-5x text-warning mb-4"></i>
+                <h1 class="display-4 text-muted">403</h1>
+                <h4>Access Forbidden</h4>
+                <p class="text-muted mb-4">
+                    You don't have permission to access this resource.
+                </p>
+                <div class="alert alert-warning text-start">
+                    <strong>Possible reasons:</strong>
+                    <ul class="mb-0">
+                        <li>You need admin privileges to access this page</li>
+                        <li>Your session may have expired</li>
+                        <li>You're trying to access a restricted area</li>
+                    </ul>
+                </div>
+                <div class="d-grid gap-2 d-md-block">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                        <i class="fas fa-home"></i> Go to Dashboard
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-sign-out-alt"></i> Login Again
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

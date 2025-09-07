@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}{{ supplier.name }} - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-truck"></i> {{ supplier.name }}
+        </h1>
+        <p class="text-muted">Supplier Details</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('edit_supplier', supplier_id=supplier.id) }}" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Edit Supplier
+        </a>
+        <a href="{{ url_for('suppliers') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Suppliers
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Supplier Details -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Supplier Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Contact Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Name:</strong></td>
+                                <td>{{ supplier.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Contact:</strong></td>
+                                <td>
+                                    {% if supplier.contact %}
+                                    <i class="fas fa-phone text-muted"></i> {{ supplier.contact }}
+                                    {% else %}
+                                    <span class="text-muted">Not provided</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Email:</strong></td>
+                                <td>
+                                    {% if supplier.email %}
+                                    <i class="fas fa-envelope text-muted"></i> 
+                                    <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>
+                                    {% else %}
+                                    <span class="text-muted">Not provided</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Business Statistics</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Total Products:</strong></td>
+                                <td><span class="badge bg-info">{{ supplier_stats.total_products }}</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Stock Value:</strong></td>
+                                <td><strong>${{ "%.2f"|format(supplier_stats.total_stock_value) }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Low Stock Items:</strong></td>
+                                <td>
+                                    {% if supplier_stats.low_stock_count > 0 %}
+                                    <span class="badge bg-warning">{{ supplier_stats.low_stock_count }}</span>
+                                    {% else %}
+                                    <span class="text-success">None</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Out of Stock:</strong></td>
+                                <td>
+                                    {% if supplier_stats.out_of_stock_count > 0 %}
+                                    <span class="badge bg-danger">{{ supplier_stats.out_of_stock_count }}</span>
+                                    {% else %}
+                                    <span class="text-success">None</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if supplier.address %}
+                <hr>
+                <h6>Address</h6>
+                <p>{{ supplier.address }}</p>
+                {% endif %}
+                
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            <strong>Added:</strong> {{ supplier.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        </small>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            <strong>Last Updated:</strong> {{ supplier.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products from this Supplier -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Products from {{ supplier.name }}</h5>
+            </div>
+            <div class="card-body">
+                {% if products %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr class="{{ 'out-of-stock' if product.is_out_of_stock() else 'low-stock' if product.is_low_stock() }}">
+                                <td>
+                                    <strong>{{ product.name }}</strong>
+                                    {% if product.sku %}
+                                    <br><small class="text-muted">SKU: {{ product.sku }}</small>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge bg-info">{{ product.category }}</span></td>
+                                <td>${{ "%.2f"|format(product.price) }}</td>
+                                <td>{{ product.quantity }}</td>
+                                <td>
+                                    {% if product.is_out_of_stock() %}
+                                    <span class="badge bg-danger">Out of Stock</span>
+                                    {% elif product.is_low_stock() %}
+                                    <span class="badge bg-warning">Low Stock</span>
+                                    {% else %}
+                                    <span class="badge bg-success">In Stock</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('view_product', product_id=product.id) }}" 
+                                       class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <h6>No Products</h6>
+                    <p class="text-muted">This supplier doesn't have any products yet.</p>
+                    <a href="{{ url_for('add_product') }}?supplier_id={{ supplier.id }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Product for this Supplier
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('add_product') }}?supplier_id={{ supplier.id }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Add Product
+                    </a>
+                    <a href="{{ url_for('edit_supplier', supplier_id=supplier.id) }}" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Edit Supplier
+                    </a>
+                    {% if supplier.email %}
+                    <a href="mailto:{{ supplier.email }}" class="btn btn-outline-info">
+                        <i class="fas fa-envelope"></i> Send Email
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Supplier Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Supplier Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="border-end">
+                            <h4 class="text-primary mb-0">{{ supplier_stats.total_products }}</h4>
+                            <small class="text-muted">Products</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h4 class="text-success mb-0">${{ "%.0f"|format(supplier_stats.total_stock_value) }}</h4>
+                        <small class="text-muted">Stock Value</small>
+                    </div>
+                </div>
+                
+                {% if supplier_stats.low_stock_count > 0 or supplier_stats.out_of_stock_count > 0 %}
+                <hr>
+                <div class="alert alert-warning small mb-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Stock Alerts:</strong><br>
+                    {% if supplier_stats.out_of_stock_count > 0 %}
+                    {{ supplier_stats.out_of_stock_count }} out of stock<br>
+                    {% endif %}
+                    {% if supplier_stats.low_stock_count > 0 %}
+                    {{ supplier_stats.low_stock_count }} low stock
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

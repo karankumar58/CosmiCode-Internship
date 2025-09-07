@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-exchange-alt"></i> Inventory Transactions
+        </h1>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('add_transaction') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Record Transaction
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="search" class="form-label">Search</label>
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search }}" placeholder="Product name, SKU, or notes">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label for="type" class="form-label">Type</label>
+                <select class="form-select" id="type" name="type">
+                    <option value="">All Types</option>
+                    <option value="add" {{ 'selected' if selected_type == 'add' }}>Stock In</option>
+                    <option value="remove" {{ 'selected' if selected_type == 'remove' }}>Stock Out</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="product_id" class="form-label">Product</label>
+                <select class="form-select" id="product_id" name="product_id">
+                    <option value="">All Products</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}" {{ 'selected' if product.id == selected_product }}>
+                        {{ product.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="user_id" class="form-label">User</label>
+                <select class="form-select" id="user_id" name="user_id">
+                    <option value="">All Users</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {{ 'selected' if user.id == selected_user }}>
+                        {{ user.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Date Range</label>
+                <div class="row">
+                    <div class="col-6">
+                        <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+                    </div>
+                    <div class="col-6">
+                        <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <a href="{{ url_for('transactions') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Transactions Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            Transaction History 
+            <span class="badge bg-secondary">{{ transactions.total }} total</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if transactions.items %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Product</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Stock Change</th>
+                        <th>User</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions.items %}
+                    <tr>
+                        <td>
+                            <strong>{{ transaction.created_at.strftime('%Y-%m-%d') }}</strong>
+                            <br><small class="text-muted">{{ transaction.created_at.strftime('%H:%M:%S') }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ transaction.product.name }}</strong>
+                            {% if transaction.product.sku %}
+                            <br><small class="text-muted">SKU: {{ transaction.product.sku }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if transaction.transaction_type == 'add' %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-plus"></i> Stock In
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger">
+                                <i class="fas fa-minus"></i> Stock Out
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ transaction.quantity }}</strong>
+                            {% if transaction.unit_price %}
+                            <br><small class="text-muted">${{ "%.2f"|format(transaction.unit_price) }} each</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ transaction.old_quantity }}</span>
+                            <i class="fas fa-arrow-right mx-1"></i>
+                            <strong>{{ transaction.new_quantity }}</strong>
+                        </td>
+                        <td>
+                            <i class="fas fa-user text-muted"></i> {{ transaction.user.username }}
+                        </td>
+                        <td>
+                            {% if transaction.notes %}
+                            {{ transaction.notes[:50] }}{% if transaction.notes|length > 50 %}...{% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if transactions.pages > 1 %}
+        <nav aria-label="Transactions pagination">
+            <ul class="pagination">
+                {% if transactions.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('transactions', page=transactions.prev_num, search=search, type=selected_type, product_id=selected_product, user_id=selected_user, date_from=date_from, date_to=date_to) }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for page_num in transactions.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != transactions.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('transactions', page=page_num, search=search, type=selected_type, product_id=selected_product, user_id=selected_user, date_from=date_from, date_to=date_to) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if transactions.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('transactions', page=transactions.next_num, search=search, type=selected_type, product_id=selected_product, user_id=selected_user, date_from=date_from, date_to=date_to) }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+            <h5>No Transactions Found</h5>
+            <p class="text-muted">
+                {% if search or selected_type or selected_product or selected_user or date_from or date_to %}
+                No transactions match your current filters. Try adjusting your search criteria.
+                {% else %}
+                No transactions have been recorded yet. Click "Record Transaction" to get started.
+                {% endif %}
+            </p>
+            {% if not (search or selected_type or selected_product or selected_user or date_from or date_to) %}
+            <a href="{{ url_for('add_transaction') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Record Your First Transaction
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

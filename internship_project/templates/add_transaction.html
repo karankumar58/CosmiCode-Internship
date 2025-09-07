@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Record Transaction - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-plus"></i> Record Inventory Transaction
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="needs-validation" novalidate>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="product_id" class="form-label">Product *</label>
+                            <select class="form-select" id="product_id" name="product_id" required>
+                                <option value="">Select a product</option>
+                                {% for product in products %}
+                                <option value="{{ product.id }}" 
+                                        {{ 'selected' if product.id == selected_product_id }}
+                                        data-stock="{{ product.quantity }}"
+                                        data-price="{{ product.price }}"
+                                        data-sku="{{ product.sku or '' }}"
+                                        data-supplier="{{ product.supplier.name }}">
+                                    {{ product.name }} (Stock: {{ product.quantity }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">
+                                Please select a product.
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="transaction_type" class="form-label">Transaction Type *</label>
+                            <select class="form-select" id="transaction_type" name="transaction_type" required>
+                                <option value="">Select transaction type</option>
+                                <option value="add" {{ 'selected' if selected_type == 'add' }}>
+                                    <i class="fas fa-plus"></i> Stock In (Add Inventory)
+                                </option>
+                                <option value="remove" {{ 'selected' if selected_type == 'remove' }}>
+                                    <i class="fas fa-minus"></i> Stock Out (Remove Inventory)
+                                </option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Please select a transaction type.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Product Info Display -->
+                    <div id="productInfo" class="card bg-light mb-3" style="display: none;">
+                        <div class="card-body">
+                            <h6 class="card-title">Product Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small><strong>SKU:</strong> <span id="productSku">-</span></small><br>
+                                    <small><strong>Supplier:</strong> <span id="productSupplier">-</span></small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small><strong>Current Stock:</strong> <span id="currentStock">0</span></small><br>
+                                    <small><strong>Unit Price:</strong> $<span id="unitPrice">0.00</span></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="quantity" class="form-label">Quantity *</label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" 
+                                   min="1" required>
+                            <div class="invalid-feedback">
+                                Please provide a valid quantity.
+                            </div>
+                            <div id="stockWarning" class="form-text text-danger" style="display: none;">
+                                <i class="fas fa-exclamation-triangle"></i> 
+                                Insufficient stock available.
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Stock After Transaction</label>
+                            <div class="form-control-plaintext">
+                                <span id="currentStockDisplay">-</span>
+                                <i class="fas fa-arrow-right mx-2"></i>
+                                <strong id="newStockDisplay">-</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"
+                                  placeholder="Optional notes about this transaction (e.g., reason for stock adjustment, supplier info, etc.)"></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Transaction Types:</strong><br>
+                        <strong>Stock In:</strong> Use when receiving new inventory, returns, or adjustments that increase stock.<br>
+                        <strong>Stock Out:</strong> Use for sales, damaged goods, theft, or adjustments that decrease stock.
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('transactions') }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="fas fa-save"></i> Record Transaction
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productSelect = document.getElementById('product_id');
+    const transactionTypeSelect = document.getElementById('transaction_type');
+    const quantityInput = document.getElementById('quantity');
+    const productInfo = document.getElementById('productInfo');
+    const currentStockSpan = document.getElementById('currentStock');
+    const productSkuSpan = document.getElementById('productSku');
+    const productSupplierSpan = document.getElementById('productSupplier');
+    const unitPriceSpan = document.getElementById('unitPrice');
+    const currentStockDisplay = document.getElementById('currentStockDisplay');
+    const newStockDisplay = document.getElementById('newStockDisplay');
+    const stockWarning = document.getElementById('stockWarning');
+    const submitBtn = document.getElementById('submitBtn');
+
+    let currentStock = 0;
+
+    function updateProductInfo() {
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        
+        if (selectedOption.value) {
+            currentStock = parseInt(selectedOption.dataset.stock);
+            const price = parseFloat(selectedOption.dataset.price);
+            const sku = selectedOption.dataset.sku;
+            const supplier = selectedOption.dataset.supplier;
+
+            currentStockSpan.textContent = currentStock;
+            productSkuSpan.textContent = sku || 'Not set';
+            productSupplierSpan.textContent = supplier;
+            unitPriceSpan.textContent = price.toFixed(2);
+            currentStockDisplay.textContent = currentStock;
+
+            productInfo.style.display = 'block';
+            updateStockCalculation();
+        } else {
+            productInfo.style.display = 'none';
+            currentStock = 0;
+        }
+    }
+
+    function updateStockCalculation() {
+        const quantity = parseInt(quantityInput.value) || 0;
+        const transactionType = transactionTypeSelect.value;
+
+        if (quantity > 0 && transactionType) {
+            let newStock;
+            
+            if (transactionType === 'add') {
+                newStock = currentStock + quantity;
+                stockWarning.style.display = 'none';
+                submitBtn.disabled = false;
+            } else if (transactionType === 'remove') {
+                newStock = currentStock - quantity;
+                
+                if (quantity > currentStock) {
+                    stockWarning.style.display = 'block';
+                    submitBtn.disabled = true;
+                    newStock = 0;
+                } else {
+                    stockWarning.style.display = 'none';
+                    submitBtn.disabled = false;
+                }
+            }
+
+            newStockDisplay.textContent = newStock;
+            
+            // Add color coding
+            if (newStock < 0) {
+                newStockDisplay.className = 'text-danger';
+            } else if (newStock === 0) {
+                newStockDisplay.className = 'text-warning';
+            } else {
+                newStockDisplay.className = 'text-success';
+            }
+        } else {
+            newStockDisplay.textContent = '-';
+            newStockDisplay.className = '';
+            stockWarning.style.display = 'none';
+            submitBtn.disabled = false;
+        }
+    }
+
+    // Event listeners
+    productSelect.addEventListener('change', updateProductInfo);
+    transactionTypeSelect.addEventListener('change', updateStockCalculation);
+    quantityInput.addEventListener('input', updateStockCalculation);
+
+    // Initialize if product is pre-selected
+    if (productSelect.value) {
+        updateProductInfo();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-chart-bar"></i> Reports & Analytics
+        </h1>
+    </div>
+    <div class="col-md-6 text-end">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-download"></i> Export Reports
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{{ url_for('export_report', type='inventory', date_from=date_from, date_to=date_to) }}">
+                    <i class="fas fa-box"></i> Current Inventory (CSV)
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('export_report', type='transactions', date_from=date_from, date_to=date_to) }}">
+                    <i class="fas fa-exchange-alt"></i> Transactions (CSV)
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('export_report', type='low_stock') }}">
+                    <i class="fas fa-exclamation-triangle"></i> Low Stock Alert (CSV)
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Date Range Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="date_from" class="form-label">From Date</label>
+                <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+            </div>
+            <div class="col-md-4">
+                <label for="date_to" class="form-label">To Date</label>
+                <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-sync"></i> Update Report
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stats-card">
+            <div class="stats-number">{{ report_data.inventory_stats.total_products }}</div>
+            <div class="stats-label">
+                <i class="fas fa-box"></i> Total Products
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card">
+            <div class="stats-number">${{ "%.0f"|format(report_data.inventory_stats.total_value) }}</div>
+            <div class="stats-label">
+                <i class="fas fa-dollar-sign"></i> Inventory Value
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card">
+            <div class="stats-number">{{ report_data.transaction_stats.total_transactions }}</div>
+            <div class="stats-label">
+                <i class="fas fa-exchange-alt"></i> Transactions ({{ report_data.date_range.days }} days)
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card">
+            <div class="stats-number">{{ report_data.inventory_stats.total_suppliers }}</div>
+            <div class="stats-label">
+                <i class="fas fa-truck"></i> Active Suppliers
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transaction Summary -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Transaction Summary</h6>
+                <small class="text-muted">{{ date_from }} to {{ date_to }}</small>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-success mb-1">{{ report_data.transaction_stats.stock_in_count }}</h4>
+                        <small class="text-muted">Stock In Transactions</small>
+                        <br><small class="text-success">+{{ report_data.transaction_stats.stock_in_quantity }} units</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-danger mb-1">{{ report_data.transaction_stats.stock_out_count }}</h4>
+                        <small class="text-muted">Stock Out Transactions</small>
+                        <br><small class="text-danger">-{{ report_data.transaction_stats.stock_out_quantity }} units</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Stock Alerts</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-warning mb-1">{{ report_data.alerts.low_stock_products|length }}</h4>
+                        <small class="text-muted">Low Stock Items</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-danger mb-1">{{ report_data.alerts.out_of_stock_products|length }}</h4>
+                        <small class="text-muted">Out of Stock</small>
+                    </div>
+                </div>
+                {% if report_data.alerts.low_stock_products or report_data.alerts.out_of_stock_products %}
+                <hr>
+                <a href="#stockAlerts" class="btn btn-sm btn-outline-warning w-100" data-bs-toggle="collapse">
+                    <i class="fas fa-eye"></i> View Details
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Alerts Details (Collapsible) -->
+{% if report_data.alerts.low_stock_products or report_data.alerts.out_of_stock_products %}
+<div class="collapse mb-4" id="stockAlerts">
+    <div class="card">
+        <div class="card-header">
+            <h6 class="card-title mb-0">Stock Alert Details</h6>
+        </div>
+        <div class="card-body">
+            {% if report_data.alerts.out_of_stock_products %}
+            <div class="alert alert-danger">
+                <h6><i class="fas fa-times-circle"></i> Out of Stock ({{ report_data.alerts.out_of_stock_products|length }})</h6>
+                <ul class="mb-0">
+                    {% for product in report_data.alerts.out_of_stock_products %}
+                    <li>{{ product.name }} ({{ product.category }}) - {{ product.supplier.name }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            {% if report_data.alerts.low_stock_products %}
+            <div class="alert alert-warning">
+                <h6><i class="fas fa-exclamation-triangle"></i> Low Stock ({{ report_data.alerts.low_stock_products|length }})</h6>
+                <ul class="mb-0">
+                    {% for product in report_data.alerts.low_stock_products %}
+                    {% if not product.is_out_of_stock() %}
+                    <li>{{ product.name }} - {{ product.quantity }} remaining (Min: {{ product.min_stock_level }})</li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Top Products and Category Breakdown -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Top Products by Transaction Volume</h6>
+                <small class="text-muted">{{ date_from }} to {{ date_to }}</small>
+            </div>
+            <div class="card-body">
+                {% if report_data.top_products %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Total Qty</th>
+                                <th>Transactions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in report_data.top_products %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td><span class="badge bg-info">{{ product.total_quantity }}</span></td>
+                                <td>{{ product.transaction_count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">No transactions in selected date range.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Inventory by Category</h6>
+            </div>
+            <div class="card-body">
+                {% if report_data.category_stats %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Products</th>
+                                <th>Total Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in report_data.category_stats %}
+                            <tr>
+                                <td><span class="badge bg-info">{{ category.category }}</span></td>
+                                <td>{{ category.product_count }}</td>
+                                <td>${{ "%.2f"|format(category.total_value or 0) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">No categories found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
