@@ -1,7 +1,4 @@
 # CosmiCode-Internship
-Perfect Internship ke liye agar aap apna project GitHub par dalenge to ek **professional README.md** bahut strong impression create karega.
-Main aapke liye ek **ready-to-use README.md** likh deta hoon jo aap directly copy-paste kar sakte ho aur apne project ke hisaab se modify bhi kar sakte ho.
-
 # Inventory Management System
 
 An **Inventory Management System** built with **Flask, SQLite, HTML, CSS, and JavaScript**.
